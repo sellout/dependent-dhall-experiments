@@ -1,0 +1,196 @@
+{-
+Experimenting with dependent types & proofs.
+
+This comment contains things I haven’t proven yet.
+
+let extensionality =
+        λ(a : Type)
+      → λ(b : Type)
+      → λ(f : a → b)
+      → λ(g : a → b)
+      → λ(eq : ∀(x : a) → Leibniz b { _1 = f x, _2 = g x })
+      →   (λ(h : (a → b) → Type) → λ(hf : h f) → hf : h g)
+        : Leibniz (a → b) { _1 = f, _2 = g }
+
+let TToLeibniz =
+        λ(b : Bool)
+      → λ(tt : T b)
+      →   (if b then (Decidable Bool).unit b else merge {=} (tt : T False))
+        : Leibniz Bool { _1 = True, _2 = b }
+
+let parity =
+        λ(n : Natural)
+      →   Natural/fold
+          n
+          (Parity n)
+          (   λ(p : Parity n)
+            → merge
+              { Even =
+                    λ ( fn
+                      :   ∀(r : Type)
+                        → (∀(m : Natural) → Leibniz Natural (m + m) n → r)
+                        → (Parity (n + 1)).Odd
+                          (   λ(r : Type)
+                            → λ ( fn2
+                                :   ∀(m : Natural)
+                                  → Leibniz Natural (1 + m + m) n
+                                  → r
+                                )
+                            → fn2 m
+                          )
+                      )
+                  → fn
+                    (Parity (1 + n))
+                    (λ(m : Natural) → λ(subst : Leibniz Natural (m + m) n) → x)
+              }
+              p
+          )
+          ( (Parity 0).Even
+            (   λ(r : Type)
+              → λ(fn : ∀(m : Natural) → Leibniz Natural (m + m) n → r)
+              → fn 0 ((Decidable Natural).unit 0)
+            )
+          )
+        : Parity n
+
+    , plusReducesS =
+          λ(n : Natural)
+        → λ(m : Natural)
+        → Natural/fold
+          n
+          (Leibniz Natural { _1 = 1 + (n + m), _2 = n + (1 + m) })
+          (cong Natural (1 + (n + m)) (n + (1 + m)) (λ(x : Natural) → 1 + x))
+          ((Decidable Natural).unit (n + (1 + m)))
+
+let sLEs =
+        λ(m : Natural)
+      → λ(n : Natural)
+      → λ(le : LE m n)
+      →   (   λ(r : Type)
+            → λ ( fn
+                :   ∀(q : Natural)
+                  → Leibniz Natural { _1 = 1 + m + q, _2 = 1 + n }
+                  → r
+                )
+            → le
+              r
+              (   λ(q : Natural)
+                → λ(subst : Leibniz Natural { _1 = m + q, _2 = n })
+                → fn q (cong Natural (m + q) n (λ(x : Natural) → 1 + x) subst)
+              )
+          )
+        : LE (1 + m) (1 + n)
+-}
+let Leibniz =
+        λ(cObject : Type)
+      → λ(a : { _1 : cObject, _2 : cObject })
+      → ∀(f : cObject → Type) → f a._1 → f a._2
+
+let Decidable = ./dependent
+
+let Natural/le =
+      https://raw.githubusercontent.com/sellout/dada/kind-polymorphism/Natural/le
+
+let Natural/eq =
+      λ(x : Natural) → λ(y : Natural) → Natural/le x y && Natural/le y x
+
+let disjointTy = λ(n : Natural) → if Natural/isZero n then {} else <>
+
+let disjoint =
+        λ(n : Natural)
+      → λ(p : Leibniz Natural { _1 = 0, _2 = n + 1 })
+      → p disjointTy {=}
+
+let cong =
+        λ(cObject : Type)
+      → λ(a : cObject)
+      → λ(b : cObject)
+      → λ(f : cObject → cObject)
+      → λ(subst : Leibniz cObject { _1 = a, _2 = b })
+      →   (λ(g : cObject → Type) → subst (λ(x : cObject) → g (f x)))
+        : Leibniz cObject { _1 = f a, _2 = f b }
+
+let T = λ(b : Bool) → if b then {} else <> : Type
+
+let Not = λ(a : Type) → (a → <>) : Type
+
+let NotNotIntro = λ(a : Type) → λ(x : a) → (λ(na : Not a) → na x) : Not (Not a)
+
+let NotNotNotElim =
+        λ(a : Type)
+      → λ(na : Not (Not (Not a)))
+      → (λ(x : a) → na (NotNotIntro a x)) : Not a
+
+let contraposition =
+        λ(a : Type)
+      → λ(b : Type)
+      → λ(f : a → b)
+      → λ(nb : Not b)
+      → (λ(x : a) → nb (f x)) : Not a
+
+let OneNeTwo =
+        (   λ(subst : ∀(f : Natural → Type) → f 1 → f 2)
+          → subst (λ(n : Natural) → if Natural/eq 1 n then {} else <>) {=}
+        )
+      : Not (Leibniz Natural { _1 = 1, _2 = 2 })
+
+let LeibnizToT =
+        λ(b : Bool)
+      → λ(subst : Leibniz Bool { _1 = True, _2 = b })
+      → subst T {=} : T b
+
+let Parity =
+        λ(n : Natural)
+      → < Even :
+              ∀(r : Type)
+            → (∀(m : Natural) → Leibniz Natural { _1 = m + m, _2 = n } → r)
+            → r
+        | Odd :
+              ∀(r : Type)
+            → (∀(m : Natural) → Leibniz Natural { _1 = 1 + m + m, _2 = n } → r)
+            → r
+        >
+
+let Dec =
+        λ(a : Type)
+      → < yes :
+            ∀(r : Type) → (∀(x : a) → r) → r
+        | no :
+            ∀(r : Type) → (∀(x : Not a) → r) → r
+        >
+
+let LE =
+        λ(m : Natural)
+      → λ(n : Natural)
+      →   ∀(r : Type)
+        → (∀(q : Natural) → Leibniz Natural { _1 = m + q, _2 = n } → r)
+        → r
+
+let zLEn =
+        λ(n : Natural)
+      →   (   λ(r : Type)
+            → λ ( fn
+                : ∀(q : Natural) → Leibniz Natural { _1 = 0 + q, _2 = n } → r
+                )
+            → fn n ((Decidable Natural).unit n)
+          )
+        : LE 0 n
+
+let sucNleZ = λ(m : Natural) → Not (LE (1 + m) 0)
+
+in  { trueIsTrue =
+        (Decidable Bool).unit True : Leibniz Bool { _1 = True, _2 = True }
+    , fiveIsFive =
+        (Decidable Natural).unit 5 : Leibniz Natural { _1 = 5, _2 = 5 }
+    , twoPlusTwo =
+        (Decidable Natural).unit 4 : Leibniz Natural { _1 = 2 + 2, _2 = 4 }
+    , nIsN =
+          λ(n : Natural)
+        → (Decidable Natural).unit n : Leibniz Natural { _1 = n, _2 = n }
+    , plusReduces =
+          λ(n : Natural)
+        → (Decidable Natural).unit n : Leibniz Natural { _1 = 0 + n, _2 = n }
+    , plusReducesZ =
+          λ(n : Natural)
+        → (Decidable Natural).unit n : Leibniz Natural { _1 = n + 0, _2 = n }
+    }

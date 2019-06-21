@@ -1,0 +1,46 @@
+-- let Decidable =
+--         λ(a : Type)
+--       → λ(f : a → a → Bool)
+--       → λ(x : a)
+--       → λ(y : a)
+--       → if f x y then {} else <>
+
+-- let Refl = {=}
+
+-- let Natural/le =
+--       https://raw.githubusercontent.com/sellout/dada/kind-polymorphism/Natural/le
+
+-- let Natural/eq =
+--       λ(x : Natural) → λ(y : Natural) → Natural/le x y && Natural/le y x
+
+-- let sym =
+--         λ(x : Natural)
+--       → λ(y : Natural)
+--       → λ(p : Decidable Natural Natural/eq x y)
+--       → p : Decidable Natural Natural/eq y x
+
+-- let replace =
+--         λ(x : Natural)
+--       → λ(y : Natural)
+--       → λ(P : Natural → Type)
+--       → λ(p : Decidable Natural Natural/eq x y)
+--       → λ(Px : P x)
+--       → P y
+
+-- let disjointTy = λ(n : Natural) → if Natural/isZero n then {} else <>
+
+-- let disjoint =
+--         λ(n : Natural)
+--       → λ(p : Decidable Natural Natural/eq 0 (n + 1))
+--       → replace disjointTy p {=}
+
+-- in  { trueIsTrue =
+--         Refl : Decidable Bool (λ(a : Bool) → λ(b : Bool) → a == b) True True
+--     , fiveIsFive =
+--         Refl : Decidable Natural Natural/eq 5 5
+--     , twoPlusTwo =
+--         Refl : Decidable Natural Natural/eq (2 + 2) 4
+--     , nIsN =
+--         λ(n : Natural) → Refl : Decidable Natural Natural/eq n n
+--     }
+<>
